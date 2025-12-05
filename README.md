@@ -24,7 +24,7 @@ You can use the quiet mode to suppress most log messages:
 mvn clean install -q
 ```
 
-## Start application (dev)
+## Start application
 
 First, make sure that the Docker daemon is running.
 Before you start the application, you first need to start a Postgres docker container:
@@ -33,7 +33,7 @@ Before you start the application, you first need to start a Postgres docker cont
 docker run -d --name db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17-alpine
 ```
 
-Then, you can start the application:
+Then, you can start the application in the `dev` profile for local development:
 
 ```shell
 cd application
@@ -41,13 +41,20 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 **Note:** The data source is configured via the [`application.yaml`](application/src/main/resources/application.yaml) file.
 
-## REST API
+## Explore the REST API
+
+### OpenAPI specification
+
+After starting the application in the `dev` profile, you can access the OpenAPI specification (JSON) at [`http://localhost:8080/api/api-docs`](http://localhost:8080/api/api-docs).<br/>
+You can also access the Swagger UI to interactively explore the API at [`http://localhost:8080/api/swagger-ui/index.html`](http://localhost:8080/api/swagger-ui/index.html).
+
+### Local testing
 
 You can use `curl` in the command line to send HTTP requests to the REST API.
 
-### POS endpoint
+#### POS endpoints (/api/pos)
 
-#### Get POS
+**Get POS:**
 
 All POS:
 ```shell
@@ -64,7 +71,7 @@ POS by name:
 curl http://localhost:8080/api/pos/filter?name=Schmelzpunkt # add valid POS name here
 ```
 
-#### Create POS
+##### Create POS
 
 Create a POS based on a JSON object provided in the request body:
 
@@ -89,23 +96,23 @@ See bean validation in action:
 curl --header "Content-Type: application/json" --request POST -i --data '{"name":"","description":"","type":"CAFE","campus":"ALTSTADT","street":"Hauptstraße","houseNumber":"100","postalCode":69117,"city":"Heidelberg"}' http://localhost:8080/api/pos
 ```
 
-#### Update POS
+##### Update POS
 
 Update title and description:
 ```shell
 curl --header "Content-Type: application/json" --request PUT --data '{"id":4,"name":"New coffee","description":"Great croissants","type":"CAFE","campus":"ALTSTADT","street":"Hauptstraße","houseNumber":"95","postalCode":69117,"city":"Heidelberg"}' http://localhost:8080/api/pos/4 # set correct POS id here and in the body
 ```
 
-#### Delete POS
+##### Delete POS
 
 Delete POS by ID:
 ```shell
 curl --request DELETE -i http://localhost:8080/api/pos/1 # set existing POS ID here
 ```
 
-### Users endpoint
+#### Users endpoints (/api/users)
 
-#### Get users
+##### Get users
 
 All users:
 ```shell
@@ -122,7 +129,7 @@ User by login name:
 curl http://localhost:8080/api/users/filter?login_name=jane_doe # add valid user login name here
 ```
 
-#### Create users
+##### Create users
 
 ```shell
 curl --header "Content-Type: application/json" --request POST --data '{"loginName":"other_login_name","emailAddress":"other.person@uni-heidelberg.de","firstName":"New","lastName":"Person"}' http://localhost:8080/api/users
@@ -133,23 +140,23 @@ See bean validation in action:
 curl --header "Content-Type: application/json" --request POST -i --data '{"loginName":"other_login_name!","emailAddress":"other.personATuni-heidelberg.de","firstName":"","lastName":""}' http://localhost:8080/api/users
 ```
 
-#### Update user
+##### Update user
 
 Update the login name and the email address:
 ```shell
 curl --header "Content-Type: application/json" --request PUT --data '{"id":1,"createdAt":"2025-06-03T12:00:00","updatedAt":"2025-06-03T12:00:00","loginName":"jane_doe_new","emailAddress":"jane.doe.new@uni-heidelberg.de","firstName":"Jane","lastName":"Doe"}' http://localhost:8080/api/users/1 # set correct user id here and in the body
 ```
 
-#### Delete user
+##### Delete user
 
 Delete user by ID:
 ```shell
 curl --request DELETE -i http://localhost:8080/api/users/1 # set existing POS ID here
 ```
 
-### Reviews endpoint
+#### Reviews endpoint (/api/reviews)
 
-#### Get reviews
+##### Get reviews
 
 All reviews:
 ```shell
@@ -166,7 +173,7 @@ Get approved reviews for a POS:
 curl http://localhost:8080/api/reviews/filter?pos_id=1&approved=true # add valid POS id here
 ```
 
-#### Create reviews
+##### Create reviews
 
 ```shell
 curl --header "Content-Type: application/json" --request POST --data '{"posId":2,"authorId":1,"review":"Great place!"}' http://localhost:8080/api/reviews # use existing IDs for posId and authorId
@@ -177,7 +184,7 @@ Users cannot create more than one review per POS:
 curl --header "Content-Type: application/json" --request POST --data '{"posId":2,"authorId":1,"review":"Great place!"}' http://localhost:8080/api/reviews # use existing IDs for posId and authorId
 ```
 
-#### Approve reviews
+##### Approve reviews
 
 Users cannot approve their own reviews:
 ```shell
