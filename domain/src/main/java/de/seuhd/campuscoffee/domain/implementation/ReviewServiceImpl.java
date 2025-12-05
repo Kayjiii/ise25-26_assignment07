@@ -49,26 +49,21 @@ public class ReviewServiceImpl extends CrudServiceImpl<Review, Long> implements 
     @Transactional
     public @NonNull Review upsert(@NonNull Review review) {
 
-        // 1. Validate author
         if (review.author() == null || review.author().getId() == null) {
             throw new ValidationException("Review must have a valid author");
         }
 
-        // 2. Validate POS
         if (review.pos() == null || review.pos().getId() == null) {
             throw new ValidationException("Review must have a valid POS");
         }
 
-        // 3. Check POS exists in DB
         posDataService.getById(review.pos().getId());
 
-        // 4. Check if the user already has a review for this POS
         List<Review> existingReviews = reviewDataService.filter(review.pos(), review.author());
         if (!existingReviews.isEmpty()) {
             throw new ValidationException("User cannot create more than one review per POS");
         }
 
-        // 5. Persist review
         Review saved = reviewDataService.upsert(review);
 
         return saved;
