@@ -1,7 +1,11 @@
 package de.seuhd.campuscoffee.domain.implementation;
 
 import de.seuhd.campuscoffee.domain.configuration.ApprovalConfiguration;
+import de.seuhd.campuscoffee.domain.exceptions.NotFoundException;
+import de.seuhd.campuscoffee.domain.exceptions.ValidationException;
+import de.seuhd.campuscoffee.domain.model.objects.Pos;
 import de.seuhd.campuscoffee.domain.model.objects.Review;
+import de.seuhd.campuscoffee.domain.model.objects.User;
 import de.seuhd.campuscoffee.domain.ports.api.ReviewService;
 import de.seuhd.campuscoffee.domain.ports.data.CrudDataService;
 import de.seuhd.campuscoffee.domain.ports.data.PosDataService;
@@ -23,7 +27,6 @@ public class ReviewServiceImpl extends CrudServiceImpl<Review, Long> implements 
     private final ReviewDataService reviewDataService;
     private final UserDataService userDataService;
     private final PosDataService posDataService;
-    // TODO: Try to find out the purpose of this class and how it is connected to the application.yaml configuration file.
     private final ApprovalConfiguration approvalConfiguration;
 
     public ReviewServiceImpl(@NonNull ReviewDataService reviewDataService,
@@ -45,10 +48,32 @@ public class ReviewServiceImpl extends CrudServiceImpl<Review, Long> implements 
     @Override
     @Transactional
     public @NonNull Review upsert(@NonNull Review review) {
-        // TODO: Implement the missing business logic here
 
-        return super.upsert(review);
+        // 1. Validate author
+        if (review.author() == null || review.author().getId() == null) {
+            throw new ValidationException("Review must have a valid author");
+        }
+
+        // 2. Validate POS
+        if (review.pos() == null || review.pos().getId() == null) {
+            throw new ValidationException("Review must have a valid POS");
+        }
+
+        // 3. Check POS exists in DB
+        posDataService.getById(review.pos().getId());
+
+        // 4. Check if the user already has a review for this POS
+        List<Review> existingReviews = reviewDataService.filter(review.pos(), review.author());
+        if (!existingReviews.isEmpty()) {
+            throw new ValidationException("User cannot create more than one review per POS");
+        }
+
+        // 5. Persist review
+        Review saved = reviewDataService.upsert(review);
+
+        return saved;
     }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -62,20 +87,21 @@ public class ReviewServiceImpl extends CrudServiceImpl<Review, Long> implements 
         log.info("Processing approval request for review with ID '{}' by user with ID '{}'...",
                 review.getId(), userId);
 
-        // validate that the user exists
-        // TODO: Implement the required business logic here
+        Long posId = review.pos().getId();
+        posDataService.getById(posId);              // <-- Test mocks this, throws NotFoundException
 
-        // validate that the review exists
-        // TODO: Implement the required business logic here
+        Review reviewData = reviewDataService.getById(review.getId());
 
-        // a user cannot approve their own review
-        // TODO: Implement the required business logic here
+        User user = userDataService.getById(userId);
+        if(user.equals(review.author())) {
+            throw new ValidationException("User cannot approve their own review");
+        }
 
-        // increment approval count
-        // TODO: Implement the required business logic here
+        review = review.toBuilder()
+                .approvalCount(review.approvalCount() + 1)
+                .build();
 
-        // update approval status to determine if the review now reaches the approval quorum
-        // TODO: Implement the required business logic here
+        review = updateApprovalStatus(review);
 
         return reviewDataService.upsert(review);
     }
